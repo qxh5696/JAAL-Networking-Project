@@ -22,4 +22,6 @@ PCAP_FILE = '201601011400.pcap'
 
 if __name__ == '__main__':
     tcp_df = parse_pcap_packets(PCAP_FILE)
-    summarize_packet_data(tcp_df)
+    results = summarize_packet_data(tcp_df)
+    
+    print(results)

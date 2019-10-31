@@ -7,30 +7,38 @@
 """
 import numpy as np
 import pandas as pd
-from sklearn.cluster import k_means
+from sklearn.cluster import KMeans
 
 '''
     Main summarization function for a batch of packets. Performs the following steps:
 
     (1) Filtering and normalization
-    (2) Dimensionality reduction (fields and packets modes)
-    (3) Final representation construction
+    (2) Dimensionality reduction using SVD
+    (3) Final representation construction using clustering
 
     @parameter df (Dataframe) packet dataframe containing a batch of size "n"
+    @parameter r (int) the number of components to retain after SVD
+    @parameter k (int) the number of clusters
+    @parameter p (int) the number of columns in the packet summary
+
+    @returns (int) the summary mode that was used
+    @returns (object) the final summary representation
 '''
-def summarize_packet_data(df):
+def summarize_packet_data(df, r=5, k=20, p=25):
 
     # Normalization step to bound values between 0 and 1
     normalized_df = normalize_packet_dataframe(df)
 
-    perform_svd_decomp(normalized_df, 5)
+    # Perform SVD composition with keeping the top (r) values
+    # Using top 20% for implementation phase
+    Xp, Ur, Sigr, Vr = perform_svd_decomp(normalized_df, r)
     
-
-    # # apply reduction
-    # reduced_df = np.linalg.svd(normalized_df.values)
-    # # kmeans
-    # clusters = k_means(reduced_df, NUM_CLUSTERS)
-    # return clusters
+    # Two methods for generating final summaries using clustering
+    # Method to be used is based on formual from Section 4.3
+    if (r * (k + p + 1)) + k < k * (p + 1):
+        return 1, create_split_summary(Ur, Sigr, Vr, k)
+    else:
+        return 2, create_combined_summary(Xp, k)
 
 '''
 
@@ -50,35 +58,102 @@ def normalize_packet_dataframe(df):
 
     return normalized_df
 
+'''
+
+    Performs SVD according to the definitions provided in the paper.
+    Returns two reduced representations that could be used in the
+    final step: Xp and u_r, sig_r, v_r. 
+
+    See Section 4.2 of the Jaal paper for more details.
+
+    @parameter df (Dataframe) the dataframe to reduce
+    @parameter r (int) the number of top n components to keep after SVD
+
+    @returns Xp, (u_r, sig_r, v_r) (numpy arr) the matrix representations of summary data
+'''
 def perform_svd_decomp(df, r):
     df = df.dropna(axis=0)
 
     np_array = df.to_numpy(dtype='float32', copy=True)
-    u, sig, vt = np.linalg.svd(np_array)
+
+    u, sig, v = np.linalg.svd(np_array, full_matrices=False)
+    vt = np.transpose(v)
 
     # Rank can be further reduced by setting r largest values to themselves,
     # and the rest to zero
-    sig_r = sig
-    largest_indexes = np.argpartition(sig_r, -r)[-r:]
-    for idx in range(0, len(sig_r)):
-        if idx not in largest_indexes:
-            sig_r[idx] = 0
-    
-    # Since we are only keeping the top r values, we can throw away
-    # unimportant columns as well
-    u_r = u
-    vt_r = vt
-    for col in range(len(np_array[0])):
-        if col not in largest_indexes:
-            u_r = np.delete(u_r, col, axis=1)
-            vt_r = np.delete(vt_r, col, axis=1)
-    
-    print("Shape u: ", u_r.shape)
-    print("Shape s: ", sig_r.shape)
-    print("Shape v: ", vt_r.shape)
+    sig_p = sig
+    for idx in range(r, len(sig)):
+        sig_p[idx] = 0
 
-    # You were working on correctly deleting the rows from the other two matricies to finish up SVD
-    
-    #prod = np.dot(u, sig_r)
-    #return np.dot(prod, vt_r)
+    Xp = np.dot(np.dot(u, np.diag(sig_p)), vt)
 
+    # Since sig_p only keeps the r largest values, we can remove the corresponding
+    # columns from u and v
+    u_r = np.delete(arr=u, obj=np.s_[r:], axis=1)
+    sig_r = np.delete(arr=sig_p, obj=np.s_[r:], axis=0)
+    v_r = np.transpose(np.delete(arr=vt, obj=np.s_[r:], axis=0))
+
+    return Xp, u_r, sig_r, v_r
+
+'''
+
+    Creates the first approach to a summary representation.
+    Performs kmeans++ clustering, then concatenates a membership
+    count vector for each cluster according to Section 4.3.
+
+    @parameter Xp (numpy array) the reduced summary array
+    @parameter k (int) the number of clusters
+
+    @returns S1m (numpy array), the final packet summary
+'''
+def create_combined_summary(Xp, k):
+    
+    clustering_results, c = get_clustering_results(Xp, k)
+    
+    # Representation is cluster centers | c
+    return np.hstack((clustering_results, c))
+
+'''
+
+    Creates the second approach to a summary representation.
+    Performs kmeans++ clustering, then concatenates a membership
+    count vector for each cluster and the dot product of the reduced
+    rank SVD results, according to Section 4.3.
+
+    @parameter Ur, Sigr, Kr (numpy array) the reduced summary array components
+    @parameter k (int) the number of clusters
+
+    @returns S2m (numpy array), the final packet summary
+'''
+def create_split_summary(Ur, Sigr, Vr, k):
+    
+    clustering_results, c = get_clustering_results(Ur, k)
+
+    # Computing the product of Sigr and VrT, referred to as e
+    e = np.dot(np.diag(Sigr), np.transpose(Vr))
+
+    return { "clusters": clustering_results, "e": e, "c": c }
+
+'''
+
+    Helper function that will perform the k-means++ algorithm and
+    compute the membership count vector (c).
+
+    @parameter X (numpy array) the 2D array to be clustered
+    @parameter k (int) the number of clusters
+
+    @returns clustering_results (numpy array) the centroids from each cluster
+    @returns c (numpy array), the array of membership counts for each cluster
+'''
+def get_clustering_results(X, k):
+
+      # Getting the initial centroids and other data
+    kmeans_results = KMeans(n_clusters=k, init='k-means++').fit(X)
+    clustering_results = kmeans_results.cluster_centers_
+
+    # Membership count vector (c)
+    c = np.zeros((k, 1))
+    for cluster in range(0, k):
+        c[cluster] = sum(1 for x in kmeans_results.labels_ if x == cluster)
+    
+    return clustering_results, c
