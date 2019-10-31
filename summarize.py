@@ -35,9 +35,13 @@ def summarize_packet_data(df, r=5, k=20, p=25):
     
     # Two methods for generating final summaries using clustering
     # Method to be used is based on formual from Section 4.3
+    print("Comparison result: (r * (k + p + 1)) + k = ", (r * (k + p + 1)) + k)
+    print("Comparison result: k * (p + 1) = ", k * (p + 1))
     if (r * (k + p + 1)) + k < k * (p + 1):
+        print("Returning case 1...")
         return 1, create_split_summary(Ur, Sigr, Vr, k)
     else:
+        print("Returning case 2...")
         return 2, create_combined_summary(Xp, k)
 
 '''
@@ -52,9 +56,11 @@ def normalize_packet_dataframe(df):
     
     # Create copy to retain integrity of original values
     normalized_df = df.copy()
+    print(normalized_df.columns)
 
     for c in normalized_df.columns:
-        normalized_df[c].apply(lambda x: x/normalized_df[c].max() if normalized_df[c].max() != 0 else 0)
+        max_val = normalized_df[c].max()
+        normalized_df[c] = normalized_df[c].apply(lambda x: (x / max_val) if max_val != 0 else 0)
 
     return normalized_df
 
