@@ -1,14 +1,15 @@
 """
-
-    File containing utility functions used in other modules.
-
-    @author Qadir Haqq, Theodora Bendlin
+File: util.py
+Description: File containing utility functions used in other modules.
+Language: python3
+Authors: Qadir Haqq, Theodora Bendlin, John Tran
 """
-import numpy as np
+
+
 import pandas as pd
 from scapy.utils import PcapReader
 from scapy.layers.l2 import Ether
-from scapy.layers.inet import IP, TCP, ICMP, UDP
+from scapy.layers.inet import IP, TCP
 
 ETHERNET_COLS = ['ETH_DST', 'ETH_SRC', 'ETH_TYPE']
 IP_COLS = ['IP_VERSION', 'IHL', 'TOS', 'IP_LEN', 'IP_ID', 'IP_FLAGS',
@@ -19,7 +20,9 @@ COLUMNS_TCP = [*ETHERNET_COLS, *IP_COLS, *TCP_COLS]
 
 NUM_CLUSTERS = 10
 
-'''
+
+def parse_pcap_packets(file):
+    """
     Opens a PCAP file containing packet dump and creates a pandas dataframe
     of TCP packet data, where each row is a separate packet.
 
@@ -28,8 +31,10 @@ NUM_CLUSTERS = 10
 
     @parameter file (string) the filename of the PCAP dump file
     @returns tcp_df (Dataframe) Pandas dataframe of (100) TCP packet data
-'''
-def parse_pcap_packets(file):
+    :param file:
+    :return:
+    """
+
     tcp_df = pd.DataFrame([], columns=COLUMNS_TCP)
 
     for pkt in PcapReader(file):
@@ -70,26 +75,33 @@ def parse_pcap_packets(file):
             tcp_df = tcp_df.append(df, ignore_index=True)
         except IndexError as e:
             pass
-    
+
     tcp_df.drop_duplicates()
     return tcp_df
 
-'''
+
+def hexstring_to_int(hex_s):
+    """
     Helper funtion that converts HW addresses into decimal form
 
     @param hex_s (str) HW address string
     @returns (int) integer representation of the HW address
-'''
-def hexstring_to_int(hex_s):
+    :param hex_s:
+    :return:
+    """
+
     hex_s = hex_s.replace(':', '')
     return int(hex_s, 16)
 
-'''
+
+def ipstring_to_int(ip_s):
+    """
     Helper funtion that converts string IP address into decimal form
 
     @param ip_s (str) IP address string
     @returns (int) integer representation of the IP address
-'''
-def ipstring_to_int(ip_s):
+    :param ip_s:
+    :return:
+    """
     ip_s = ip_s.replace('.', '')
     return int(ip_s)
