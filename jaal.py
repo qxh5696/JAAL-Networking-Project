@@ -1,9 +1,10 @@
 """
-
-    Main driver file for our Jaal system that will invoke funtionality from
-    all three modules. At the moment, funcitonality simply reads test data from
-    MAWI group and performs packet summarization.
-
+File: jaal.py
+Description: Main driver file for our Jaal system that will invoke funtionality from
+all three modules. At the moment, functionality simply reads test data from
+MAWI group and performs packet summarization.
+Language: python3
+Authors: Qadir Haqq, Theodora Bendlin, John Tran
 """
 
 from util import parse_pcap_packets
@@ -19,6 +20,6 @@ if __name__ == '__main__':
 
     print("Packets retrieved, creating summary...")
     results = summarize_packet_data(tcp_df)
-    
+
     print("Final Summary Representation: ")
     print(results)
