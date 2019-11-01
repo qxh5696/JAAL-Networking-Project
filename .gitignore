@@ -1,2 +1,10 @@
 .idea/*
 *.pcap
+
+.DS_STORE
+
+.vscode
+
+__pycache__
+
+test.txt
