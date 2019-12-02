@@ -24,34 +24,32 @@ Question Vectors:
 (ii) distributed SYN floods to represent DDoS,
 (iii) distributed port scans
 """
+
 import numpy as np
 import math
 import util
 
 # Remember to switch IP addresses out with the corresponding attack IP address and attack ports
 # https://www.hackingarticles.in/detect-nmap-scan-using-snort/
-PORT_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                  util.ipstring_to_int(util.get_ip_address()), -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+PORT_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, util.ipstring_to_int(util.get_ip_address()), -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # Identify NMAP TCP Scan (same link as above)
-NMAP_TCP_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                  util.ipstring_to_int(util.get_ip_address()), -1, 22, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+NMAP_TCP_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, util.ipstring_to_int(util.get_ip_address()), -1, 22, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # https://serverfault.com/questions/178437/snort-rules-for-syn-flood-ddos
-SYM_FLOOD_DDOS_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                  util.ipstring_to_int(util.get_ip_address()), -1, 80, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+SYM_FLOOD_DDOS_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, util.ipstring_to_int(util.get_ip_address()), -1, 80, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # https://github.com/eldondev/Snort/blob/master/rules/ddos.rules
-DDOS_RULE_1 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                  util.ipstring_to_int(util.get_ip_address()), -1, 27665, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+DDOS_RULE_1 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, util.ipstring_to_int(util.get_ip_address()), -1, 27665, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
-DDOS_RULE_2 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                  util.ipstring_to_int(util.get_ip_address()), -1, 15104, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+DDOS_RULE_2 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, util.ipstring_to_int(util.get_ip_address()), -1, 15104, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
-DDOS_RULE_3 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                  util.ipstring_to_int(util.get_ip_address()), -1, 12754, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+DDOS_RULE_3 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, util.ipstring_to_int(util.get_ip_address()), -1, 12754, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 def create_aggregate_summary(summaries):
+    if len(summaries) <= 0:
+        return None
+
     agg_summaries = []
     for summary_pair in summaries:
         if summary_pair[0] == 1:
@@ -60,10 +58,10 @@ def create_aggregate_summary(summaries):
             clusters, SigrVr = summary_pair[1]['clusters'], summary_pair[1]['e']
             prod = np.dot(clusters, SigrVr)
             agg_summaries.append(np.hstack((prod, summary_pair[1]['c'])))
-    
+
     return np.concatenate(agg_summaries, axis=0)
 
-def _distance_measure(q, x):
+def distance_measure(q, x):
     q_x_sum = 0.0
     q_sum = 0.0
     for j in range(len(q)):
@@ -77,20 +75,20 @@ def _distance_measure(q, x):
     return q_x_sum / q_sum
 
 def similarity_estimate(agg_sum, q, t_d, t_c):
-    sum = 0
+    c_sum = 0
     Q_set = set()
 
     for row in range(len(agg_sum)):
         xi = agg_sum[row][:-1]
         ci = agg_sum[-1]
 
-        if _distance_measure(q, xi) <= t_d:
-            sum += ci
+        if distance_measure(q, xi) <= t_d:
+            c_sum += ci
             Q_set.add(xi)
-    
-    if sum >= t_c:
+
+    if c_sum >= t_c:
         return True
-    
+
     return False
 
 def postprocess_header_index(agg_sum, h_idx, t_v):
@@ -109,6 +107,13 @@ def postprocess_header_index(agg_sum, h_idx, t_v):
     
     return False
 
+def inference_module(batch_summaries):
+    agg_summaries = create_aggregate_summary(batch_summaries)
+    if agg_summaries is None:
+        print("No summaries to perform inference on!")
 
-    
-
+    did_cause_error = similarity_estimate(agg_summaries, PORT_SCAN_RULE, 0.5, 3)
+    if did_cause_error:
+        print("SIMILARITY ESTIMATE DETECTED AN ATTACK")
+    else:
+        print("Did the summarization thing, didn't detect anything :(")

@@ -81,46 +81,41 @@ def parse_pcap_packets(file, limit=500):
     return tcp_df
 
 def add_pcap_packet_to_df(packet, packet_df):
-    try:
-        df = pd.DataFrame({
-                COLUMNS_TCP[0]: [hexstring_to_int(packet[Ether].dst)],
-                COLUMNS_TCP[1]: [hexstring_to_int(packet[Ether].src)],
-                COLUMNS_TCP[2]: [packet[Ether].type],
-                COLUMNS_TCP[3]: [packet[IP].version],
-                COLUMNS_TCP[4]: [packet[IP].ihl],
-                COLUMNS_TCP[5]: [packet[IP].tos],
-                COLUMNS_TCP[6]: [packet[IP].len],
-                COLUMNS_TCP[7]: [packet[IP].id],
-                COLUMNS_TCP[8]: [packet[IP].flags.value],
-                COLUMNS_TCP[9]: [packet[IP].frag],
-                COLUMNS_TCP[10]: [packet[IP].ttl],
-                COLUMNS_TCP[11]: [packet[IP].proto],
-                COLUMNS_TCP[12]: [packet[IP].chksum],
-                COLUMNS_TCP[13]: [ipstring_to_int(packet[IP].src)],
-                COLUMNS_TCP[14]: [ipstring_to_int(packet[IP].dst)],
-                COLUMNS_TCP[15]: [packet[TCP].sport],
-                COLUMNS_TCP[16]: [packet[TCP].dport],
-                COLUMNS_TCP[17]: [packet[TCP].seq],
-                COLUMNS_TCP[18]: [packet[TCP].ack],
-                COLUMNS_TCP[19]: [packet[TCP].dataofs],
-                COLUMNS_TCP[20]: [packet[TCP].reserved],
-                COLUMNS_TCP[21]: [packet[TCP].flags.value],
-                COLUMNS_TCP[22]: [packet[TCP].window],
-                COLUMNS_TCP[23]: [packet[TCP].chksum],
-                COLUMNS_TCP[24]: [packet[TCP].urgptr],
-            })
 
-        # append is NOT  an inplace operation!
-        packet_df = packet_df.append(df, ignore_index=True, sort=False)
-
-    except IndexError as e:
+    if not is_tcp_ip_packet(packet):
         return False, packet_df
-    
-<<<<<<< Updated upstream
-    return (True, packet_df)
-=======
+
+    df = pd.DataFrame({
+            COLUMNS_TCP[0]: [hexstring_to_int(packet[Ether].dst)],
+            COLUMNS_TCP[1]: [hexstring_to_int(packet[Ether].src)],
+            COLUMNS_TCP[2]: [packet[Ether].type],
+            COLUMNS_TCP[3]: [packet[IP].version],
+            COLUMNS_TCP[4]: [packet[IP].ihl],
+            COLUMNS_TCP[5]: [packet[IP].tos],
+            COLUMNS_TCP[6]: [packet[IP].len],
+            COLUMNS_TCP[7]: [packet[IP].id],
+            COLUMNS_TCP[8]: [packet[IP].flags.value],
+            COLUMNS_TCP[9]: [packet[IP].frag],
+            COLUMNS_TCP[10]: [packet[IP].ttl],
+            COLUMNS_TCP[11]: [packet[IP].proto],
+            COLUMNS_TCP[12]: [packet[IP].chksum],
+            COLUMNS_TCP[13]: [ipstring_to_int(packet[IP].src)],
+            COLUMNS_TCP[14]: [ipstring_to_int(packet[IP].dst)],
+            COLUMNS_TCP[15]: [packet[TCP].sport],
+            COLUMNS_TCP[16]: [packet[TCP].dport],
+            COLUMNS_TCP[17]: [packet[TCP].seq],
+            COLUMNS_TCP[18]: [packet[TCP].ack],
+            COLUMNS_TCP[19]: [packet[TCP].dataofs],
+            COLUMNS_TCP[20]: [packet[TCP].reserved],
+            COLUMNS_TCP[21]: [packet[TCP].flags.value],
+            COLUMNS_TCP[22]: [packet[TCP].window],
+            COLUMNS_TCP[23]: [packet[TCP].chksum],
+            COLUMNS_TCP[24]: [packet[TCP].urgptr],
+        })
+
+    # append is NOT  an inplace operation!
+    packet_df = packet_df.append(df, ignore_index=True, sort=False)
     return True, packet_df
->>>>>>> Stashed changes
 
 def hexstring_to_int(hex_s):
     """
@@ -153,5 +148,11 @@ def get_ip_address():
     host_ip = socket.gethostbyname(host_name)
     return host_ip
     
-def sim_port_scan():
-    pass
+def is_tcp_ip_packet(pkt):
+    try:
+        pkt[TCP].sport
+        pkt[IP].id
+    except IndexError as e:
+        return False
+
+    return True

@@ -43,6 +43,8 @@ class Monitor(Thread):
 
         summary = summarize_packet_data(self.batch[:MAX_BATCH])
         self.batch.drop(self.batch.index[:MAX_BATCH], inplace=True)
+        self.num_packets -= MAX_BATCH
+
         return summary
     
     def add_to_batch(self, pkt):
@@ -50,6 +52,8 @@ class Monitor(Thread):
         is_success, self.batch = util.add_pcap_packet_to_df(pkt, self.batch)
 
         if is_success:
+            print("Monitor {}: {} packets".format(self.id, self.num_packets))
+
             # Parse to see if this is a new flow
             src, dst = pkt[Ether].src, pkt[Ether].dst
             self.num_packets += 1
@@ -60,8 +64,9 @@ class Monitor(Thread):
             elif src in self.flows and dst not in self.flows[src]:
                 self.flows[src].append(dst)
                 self.num_flows += 1
-    
-        return is_success
+        
+        if len(self.batch.index) >= self.batch_size:
+                self.jaal_inst.call_inference_mod()
 
     def kill(self):
         self.shouldStop = True
