@@ -50,7 +50,7 @@ class Monitor(Thread):
     
     def add_to_batch(self, pkt):
         # Add the packet to the current dataframe
-        is_success = util.add_pcap_packet_to_df(pkt, self.batch)
+        is_success, self.batch = util.add_pcap_packet_to_df(pkt, self.batch)
 
         if is_success:
             # Parse to see if this is a new flow
