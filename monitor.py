@@ -6,11 +6,8 @@ import pandas as pd
 import util
 
 from threading import Thread
-
-from scapy.utils import PcapReader
 from scapy.layers.l2 import Ether
 
-from inference import inference_mod
 from summarize import summarize_packet_data
 
 MAX_BATCH = 250

@@ -18,9 +18,38 @@ To translate this rule into a question vector, Jaal initializes a vector of size
 
 Then, the position corresponding to the IP address is set to the normalized home network IP address and the position
 corresponding to port number is set to 22 (normalized version).
+
+Question Vectors:
+(i) SYN floods to represent DoS attacks,
+(ii) distributed SYN floods to represent DDoS,
+(iii) distributed port scans
 """
 import numpy as np
 import math
+import util
+
+# Remember to switch IP addresses out with the corresponding attack IP address and attack ports
+# https://www.hackingarticles.in/detect-nmap-scan-using-snort/
+PORT_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                  util.ipstring_to_int(util.get_ip_address()), -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
+# Identify NMAP TCP Scan (same link as above)
+NMAP_TCP_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                  util.ipstring_to_int(util.get_ip_address()), -1, 22, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
+# https://serverfault.com/questions/178437/snort-rules-for-syn-flood-ddos
+SYM_FLOOD_DDOS_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                  util.ipstring_to_int(util.get_ip_address()), -1, 80, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
+# https://github.com/eldondev/Snort/blob/master/rules/ddos.rules
+DDOS_RULE_1 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                  util.ipstring_to_int(util.get_ip_address()), -1, 27665, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
+DDOS_RULE_2 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                  util.ipstring_to_int(util.get_ip_address()), -1, 15104, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
+DDOS_RULE_3 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                  util.ipstring_to_int(util.get_ip_address()), -1, 12754, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 def create_aggregate_summary(summaries):
     agg_summaries = []
@@ -34,7 +63,7 @@ def create_aggregate_summary(summaries):
     
     return np.concatenate(agg_summaries, axis=0)
 
-def distance_measure(q, x):
+def _distance_measure(q, x):
     q_x_sum = 0.0
     q_sum = 0.0
     for j in range(len(q)):
@@ -55,7 +84,7 @@ def similarity_estimate(agg_sum, q, t_d, t_c):
         xi = agg_sum[row][:-1]
         ci = agg_sum[-1]
 
-        if distance_measure(q, xi) <= t_d:
+        if _distance_measure(q, xi) <= t_d:
             sum += ci
             Q_set.add(xi)
     

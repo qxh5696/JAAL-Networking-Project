@@ -9,17 +9,7 @@ single stream that reads in incoming TCP packets, and the flow assignment module
 pool assignment based on similar functionality described in the paper, where each "monitor" is a
 thread of execution.
 """
-import pandas as pd
-import util
-
-from threading import Thread
-
-from scapy.utils import PcapReader
 from scapy.layers.l2 import Ether
-
-from inference import inference_mod
-from summarize import summarize_packet_data
-from monitor import Monitor
 
 MAX_MONITORS = 10
 PCAP_FILE = '201601011400.pcap'
@@ -54,7 +44,7 @@ def assign_flow_to_monitor(pkt, monitors, flow_map):
     flow_assignment = 0
     if src not in flow_map or dst not in flow_map[src]:
         flow_assignment = get_least_loaded_monitor(monitors)
-        flow_map[src] = { dst : flow_assignment}
+        flow_map[src] = {dst: flow_assignment}
     else:
         flow_assignment = flow_map[src][dst]
     return flow_assignment

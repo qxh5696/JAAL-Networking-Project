@@ -34,7 +34,7 @@ class JaalModule(object):
             if summary is not None:
                 summaries.append(summary)
     
-    def start(self, test_file):
+    def start(self, test_file=PCAP_FILE):
         for id in range(0, MAX_MONITORS):
             monitor_thread = Monitor(id, self)
             monitor_thread.start()

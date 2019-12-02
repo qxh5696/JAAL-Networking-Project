@@ -10,6 +10,7 @@ import util
 import pandas as pd
 from sklearn.cluster import KMeans
 from scapy.utils import PcapReader
+from scapy.layers.inet import IP
 
 
 def summarize_packet_data(df, r=5, k=20, p=25):
@@ -31,14 +32,12 @@ def summarize_packet_data(df, r=5, k=20, p=25):
 
     # Normalization step to bound values between 0 and 1
     normalized_df = normalize_packet_dataframe(df)
-    print('normalized_df: ', normalized_df)
-
     # Perform SVD composition with keeping the top (r) values
     # Using top 20% for implementation phase
     Xp, Ur, Sigr, Vr = perform_svd_decomp(normalized_df, r)
 
     # Two methods for generating final summaries using clustering
-    # Method to be used is based on formual from Section 4.3
+    # Method to be used is based on formula from Section 4.3
     if (r * (k + p + 1)) + k < k * (p + 1):
         return 2, create_split_summary(Ur, Sigr, Vr, k)
     else:
@@ -56,8 +55,6 @@ def normalize_packet_dataframe(df):
 
     # Create copy to retain integrity of original values
     normalized_df = df.copy()
-    print('Normalized df columns: ', normalized_df.columns)
-
     for c in normalized_df.columns:
         max_val = normalized_df[c].max()
         normalized_df[c] = normalized_df[c].apply(lambda x: (x / max_val) if max_val != 0 else 0)
@@ -184,6 +181,7 @@ def _test_summarization():
     df = pd.DataFrame(columns=util.TCP_COLS)
     i = 0
     for pkt in PcapReader('201601011400.pcap'):
+        print(pkt[IP].dst)
         if i == 100:
             break
         _, df = util.add_pcap_packet_to_df(pkt, df)
