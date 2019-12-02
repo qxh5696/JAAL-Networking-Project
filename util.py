@@ -116,7 +116,11 @@ def add_pcap_packet_to_df(packet, packet_df):
     except IndexError as e:
         return False, packet_df
     
+<<<<<<< Updated upstream
     return (True, packet_df)
+=======
+    return True, packet_df
+>>>>>>> Stashed changes
 
 def hexstring_to_int(hex_s):
     """
@@ -148,3 +152,6 @@ def get_ip_address():
     host_name = socket.gethostname()
     host_ip = socket.gethostbyname(host_name)
     return host_ip
+    
+def sim_port_scan():
+    pass

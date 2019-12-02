@@ -6,6 +6,7 @@ MAWI group and performs packet summarization.
 Language: python3
 Authors: Qadir Haqq, Theodora Bendlin, John Tran
 """
+import random
 
 from util import parse_pcap_packets
 from summarize import summarize_packet_data
@@ -42,13 +43,27 @@ class JaalModule(object):
 
         # Main method of execution, will just keep reading in packets
         # until we want it to stop
+        num_pkts = 0
+        atk_pkts = 0
         try:
             for pkt in PcapReader(test_file):
 
                 #TODO: Randomly inject traffic, or create a transformed dataset that does that
+                should_attack = random.randint(0, 100)
+
+                if should_attack < 10 and (atk_pkts / num_pkts) < 0.1:
+
+                    attack_type = random.randint(0, 3)
+
+                    for _ in range(5, random.randint(10, 50)):
+                        if (atk_pkts / num_pkts) < 0.1:
+                            break
+                        
+                        atk_pkts += 1
 
                 flow_assignment = assign_flow_to_monitor(pkt, self.monitors, self.flow_map)
                 self.monitors[flow_assignment].add_to_batch(pkt)
+                num_pkts += 1
 
         except KeyboardInterrupt:
             for monitor_thread in self.monitors:
