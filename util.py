@@ -113,7 +113,7 @@ def add_pcap_packet_to_df(packet, packet_df):
         packet_df = packet_df.append(df, ignore_index=True, sort=False)
 
     except IndexError as e:
-        return False, None
+        return False, packet_df
     
     return (True, packet_df)
 

@@ -186,7 +186,9 @@ def _test_summarization():
     for pkt in PcapReader('201601011400.pcap'):
         if i == 100:
             break
-        util.add_pcap_packet_to_df(pkt, df)
+        is_success, df = util.add_pcap_packet_to_df(pkt, df)
+        if is_success:
+            print('added ', str(i))
         i += 1
     print(df)
     print(summarize_packet_data(df))
