@@ -7,6 +7,7 @@ Authors: Qadir Haqq, Theodora Bendlin, John Tran
 
 import pandas as pd
 import numpy as np
+import math
 
 from util import parse_pcap_packets
 from summarize import summarize_packet_data
@@ -23,14 +24,51 @@ def create_aggregate_summary(summaries):
     
     return np.concatenate(agg_summaries, axis=0)
 
-if __name__ == '__main__':
-    tcp_df = parse_pcap_packets('201601011400.pcap', 750)
+def distance_measure(q, x):
+    q_x_sum = 0.0
+    q_sum = 0.0
+    for j in range(len(q)):
+        if q[j] != -1:
+            q_sum += 1
+            q_x_sum = math.fabs(q[j] - x[j])
 
-    resulta = summarize_packet_data(tcp_df[:250])
-    resultb = summarize_packet_data(tcp_df[250:500])
-    resultc = summarize_packet_data(tcp_df[500:])
+    if q_sum == 0:
+        return 0
 
-    create_aggregate_summary([resulta, resultb, resultc])
+    return q_x_sum / q_sum
+
+def similarity_estimate(agg_sum, q, t_d, t_c):
+    sum = 0
+    Q_set = set()
+
+    for row in range(len(agg_sum)):
+        xi = agg_sum[row][:-1]
+        ci = agg_sum[-1]
+
+        if distance_measure(q, xi) <= t_d:
+            sum += ci
+            Q_set.add(xi)
+    
+    if sum >= t_c:
+        return True
+    
+    return False
+
+def postprocess_header_index(agg_sum, h_idx, t_v):
+    z = []
+
+    for row in range(len(agg_sum)):
+        xi = agg_sum[row][:-1]
+        ci = agg_sum[-1]
+
+        for _ in range(ci):
+            z.append(xi[h_idx])
+    
+        variance = np.var(np.concatenate(z, axis=0))
+        if variance >= t_v:
+            return True
+    
+    return False
 
 # Example SNORT Rule:
 # alert[0] tcp[1] $EXTERNAL_NET[2] any[3] -> $HOME_NET[4] 22[5] (msg: "INDICATORSCAN
