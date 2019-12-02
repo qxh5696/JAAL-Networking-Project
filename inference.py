@@ -51,6 +51,8 @@ DDOS_RULE_2 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 DDOS_RULE_3 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                   util.ipstring_to_int(util.get_ip_address()), -1, 12754, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
+QUESTION_VECTORS = [PORT_SCAN_RULE, NMAP_TCP_SCAN_RULE, SYM_FLOOD_DDOS_RULE, DDOS_RULE_1, DDOS_RULE_2, DDOS_RULE_3]
+
 def create_aggregate_summary(summaries):
     agg_summaries = []
     for summary_pair in summaries:
@@ -109,6 +111,9 @@ def postprocess_header_index(agg_sum, h_idx, t_v):
     
     return False
 
-
+def inference_module(summary):
+    agg_sum = create_aggregate_summary(summary)
+    for q in QUESTION_VECTORS:
+        similarity_estimate(agg_sum, q, )
     
 
