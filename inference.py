@@ -5,13 +5,70 @@ Language: python3
 Authors: Qadir Haqq, Theodora Bendlin, John Tran
 """
 
-import pandas
-import random
+import pandas as pd
+import numpy as np
+import math
 
-def inference_mod(summary):
-    rand_num = random.randint(0, 1000)
-    if rand_num < 100:
-        print("Dummy Error!")
+from util import parse_pcap_packets
+from summarize import summarize_packet_data
+
+def create_aggregate_summary(summaries):
+    agg_summaries = []
+    for summary_pair in summaries:
+        if summary_pair[0] == 1:
+            agg_summaries.append(summary_pair[1])
+        else:
+            clusters, SigrVr = summary_pair[1]['clusters'], summary_pair[1]['e']
+            prod = np.dot(clusters, SigrVr)
+            agg_summaries.append(np.hstack((prod, summary_pair[1]['c'])))
+    
+    return np.concatenate(agg_summaries, axis=0)
+
+def distance_measure(q, x):
+    q_x_sum = 0.0
+    q_sum = 0.0
+    for j in range(len(q)):
+        if q[j] != -1:
+            q_sum += 1
+            q_x_sum = math.fabs(q[j] - x[j])
+
+    if q_sum == 0:
+        return 0
+
+    return q_x_sum / q_sum
+
+def similarity_estimate(agg_sum, q, t_d, t_c):
+    sum = 0
+    Q_set = set()
+
+    for row in range(len(agg_sum)):
+        xi = agg_sum[row][:-1]
+        ci = agg_sum[-1]
+
+        if distance_measure(q, xi) <= t_d:
+            sum += ci
+            Q_set.add(xi)
+    
+    if sum >= t_c:
+        return True
+    
+    return False
+
+def postprocess_header_index(agg_sum, h_idx, t_v):
+    z = []
+
+    for row in range(len(agg_sum)):
+        xi = agg_sum[row][:-1]
+        ci = agg_sum[-1]
+
+        for _ in range(ci):
+            z.append(xi[h_idx])
+    
+        variance = np.var(np.concatenate(z, axis=0))
+        if variance >= t_v:
+            return True
+    
+    return False
 
 # Example SNORT Rule:
 # alert[0] tcp[1] $EXTERNAL_NET[2] any[3] -> $HOME_NET[4] 22[5] (msg: "INDICATORSCAN
@@ -30,3 +87,4 @@ def inference_mod(summary):
 def translate(snort_rule):
     vector = [-1] * 18 # initialization vector
     
+

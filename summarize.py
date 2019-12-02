@@ -39,14 +39,10 @@ def summarize_packet_data(df, r=5, k=20, p=25):
 
     # Two methods for generating final summaries using clustering
     # Method to be used is based on formual from Section 4.3
-    print("Comparison result: (r * (k + p + 1)) + k = ", (r * (k + p + 1)) + k)
-    print("Comparison result: k * (p + 1) = ", k * (p + 1))
     if (r * (k + p + 1)) + k < k * (p + 1):
-        print("Returning case 1...")
-        return 1, create_split_summary(Ur, Sigr, Vr, k)
+        return 2, create_split_summary(Ur, Sigr, Vr, k)
     else:
-        print("Returning case 2...")
-        return 2, create_combined_summary(Xp, k)
+        return 1, create_combined_summary(Xp, k)
 
 
 def normalize_packet_dataframe(df):
