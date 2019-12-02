@@ -21,7 +21,7 @@ COLUMNS_TCP = [*ETHERNET_COLS, *IP_COLS, *TCP_COLS]
 NUM_CLUSTERS = 10
 
 
-def parse_pcap_packets(file):
+def parse_pcap_packets(file, limit=500):
     """
     Opens a PCAP file containing packet dump and creates a pandas dataframe
     of TCP packet data, where each row is a separate packet.
@@ -39,7 +39,7 @@ def parse_pcap_packets(file):
 
     for pkt in PcapReader(file):
 
-        if len(tcp_df.index) >= 500:
+        if len(tcp_df.index) >= limit:
             break
 
         try:
