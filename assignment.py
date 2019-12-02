@@ -61,7 +61,8 @@ class Monitor(Thread):
     
     def add_to_batch(self, pkt):
         # Add the packet to the current dataframe
-        is_success = util.add_pcap_packet_to_df(pkt, self.batch)
+        is_success, new_batch = util.add_pcap_packet_to_df(pkt, self.batch)
+        self.batch = new_batch
 
         if is_success:
             # Parse to see if this is a new flow
@@ -92,7 +93,9 @@ def get_least_loaded_monitor(monitors):
     min_flow_idx = 0
 
     for idx in range(len(monitors)):
-        if monitors[idx].num_flows < min_flows or (monitors[idx].num_flows == min_flows and monitors[idx].num_packets < monitors[min_flow_idx].num_packets):
+        if monitors[idx].num_flows < min_flows \
+                or (monitors[idx].num_flows == min_flows
+                    and monitors[idx].num_packets < monitors[min_flow_idx].num_packets):
             min_flows = monitors[idx].num_flows
             min_flow_idx = idx
     

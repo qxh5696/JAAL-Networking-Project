@@ -113,9 +113,9 @@ def add_pcap_packet_to_df(packet, packet_df):
         packet_df = packet_df.append(df, ignore_index=True, sort=False)
 
     except IndexError as e:
-        return False
+        return False, None
     
-    return True
+    return (True, packet_df)
 
 def hexstring_to_int(hex_s):
     """

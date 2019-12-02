@@ -6,7 +6,10 @@ Authors: Qadir Haqq, Theodora Bendlin, John Tran
 """
 
 import numpy as np
+import util
+import pandas as pd
 from sklearn.cluster import KMeans
+from scapy.utils import PcapReader
 
 
 def summarize_packet_data(df, r=5, k=20, p=25):
@@ -28,6 +31,7 @@ def summarize_packet_data(df, r=5, k=20, p=25):
 
     # Normalization step to bound values between 0 and 1
     normalized_df = normalize_packet_dataframe(df)
+    print('normalized_df: ', normalized_df)
 
     # Perform SVD composition with keeping the top (r) values
     # Using top 20% for implementation phase
@@ -56,7 +60,7 @@ def normalize_packet_dataframe(df):
 
     # Create copy to retain integrity of original values
     normalized_df = df.copy()
-    print(normalized_df.columns)
+    print('Normalized df columns: ', normalized_df.columns)
 
     for c in normalized_df.columns:
         max_val = normalized_df[c].max()
@@ -179,3 +183,18 @@ def get_clustering_results(X, k):
         c[cluster] = sum(1 for x in kmeans_results.labels_ if x == cluster)
 
     return clustering_results, c
+
+def _test_summarization():
+    df = pd.DataFrame(columns=util.TCP_COLS)
+    i = 0
+    for pkt in PcapReader('201601011400.pcap'):
+        if i == 100:
+            break
+        util.add_pcap_packet_to_df(pkt, df)
+        i += 1
+    print(df)
+    print(summarize_packet_data(df))
+
+
+if __name__ == '__main__':
+    _test_summarization()
