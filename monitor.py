@@ -9,18 +9,13 @@ from threading import Thread
 from scapy.layers.l2 import Ether
 
 from summarize import summarize_packet_data
+from constants import *
 
-MAX_BATCH = 250
-
-class Monitor(Thread):
-    def __init__(self, id, jaal_inst, batch_size=MAX_BATCH):
-        Thread.__init__(self)
+class Monitor(object):
+    def __init__(self, id, batch_size=MAX_BATCH):
 
         # ID, useful for debugging
         self.id = id
-
-        # To call events on the Jaal Module to trigger summary + inference
-        self.jaal_inst = jaal_inst
 
         # Batch dataframe will hold all of the packets that are used for summarization
         self.batch = pd.DataFrame(columns=util.TCP_COLS)
@@ -33,9 +28,6 @@ class Monitor(Thread):
         # The maximum number of packets that this thread will hold until it sends them
         # to the summarization and inference module
         self.batch_size = batch_size
-
-        # Determines when this thread should stop execution
-        self.shouldStop = False
     
     def get_batch_summary(self):
         if self.num_packets < MAX_BATCH:
@@ -65,13 +57,4 @@ class Monitor(Thread):
                 self.flows[src].append(dst)
                 self.num_flows += 1
         
-        if len(self.batch.index) >= self.batch_size:
-                self.jaal_inst.call_inference_mod()
-
-    def kill(self):
-        self.shouldStop = True
-    
-    def run(self):
-        while not self.shouldStop:
-            if len(self.batch.index) >= self.batch_size:
-                self.jaal_inst.call_inference_mod()
+        return len(self.batch.index) >= self.batch_size

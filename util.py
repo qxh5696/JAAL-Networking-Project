@@ -10,16 +10,7 @@ import pandas as pd
 from scapy.utils import PcapReader
 from scapy.layers.l2 import Ether
 from scapy.layers.inet import IP, TCP
-import socket
-
-ETHERNET_COLS = ['ETH_DST', 'ETH_SRC', 'ETH_TYPE']
-IP_COLS = ['IP_VERSION', 'IHL', 'TOS', 'IP_LEN', 'IP_ID', 'IP_FLAGS',
-           'IP_FRAG', 'IP_TTL', 'IP_PROTO', 'IP_CHKSUM', 'IP_SRC', 'IP_DST']
-TCP_COLS = ['SPORT', 'DPORT', 'SEQ', 'ACK', 'DATAOFS', 'RESERVED', 'FLAGS', 'WINDOW', 'PROTOCOL_CHKSUM', 'URGPTR']
-
-COLUMNS_TCP = [*ETHERNET_COLS, *IP_COLS, *TCP_COLS]
-
-NUM_CLUSTERS = 10
+from constants import *
 
 
 def parse_pcap_packets(file, limit=500):
@@ -143,11 +134,6 @@ def ipstring_to_int(ip_s):
     ip_s = ip_s.replace('.', '')
     return int(ip_s)
 
-def get_ip_address():
-    host_name = socket.gethostname()
-    host_ip = socket.gethostbyname(host_name)
-    return host_ip
-    
 def is_tcp_ip_packet(pkt):
     try:
         pkt[TCP].sport

@@ -13,7 +13,7 @@ from scapy.utils import PcapReader
 from scapy.layers.inet import IP
 
 
-def summarize_packet_data(df, r=5, k=20, p=25):
+def summarize_packet_data(df, r=12, k=200, p=25):
     """
     Main summarization function for a batch of packets. Performs the following steps:
 
@@ -32,6 +32,7 @@ def summarize_packet_data(df, r=5, k=20, p=25):
 
     # Normalization step to bound values between 0 and 1
     normalized_df = normalize_packet_dataframe(df)
+    
     # Perform SVD composition with keeping the top (r) values
     # Using top 20% for implementation phase
     Xp, Ur, Sigr, Vr = perform_svd_decomp(normalized_df, r)

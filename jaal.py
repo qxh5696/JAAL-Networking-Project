@@ -11,81 +11,148 @@ import random
 from util import parse_pcap_packets, is_tcp_ip_packet, IP, TCP
 from summarize import summarize_packet_data
 from assignment import assign_flow_to_monitor
+from monitor import Monitor
+from inference import inference_module
+from constants import *
 
 from scapy.utils import PcapReader
 from scapy.layers.l2 import Ether
 
-from monitor import Monitor
-from inference import inference_module
+from threading import Thread
 
-# PCAP file can be downloaded from this URL:
-# http://mawi.wide.ad.jp/mawi/samplepoint-F/2016/201601011400.html
-PCAP_FILE = '201601011400.pcap'
+def spinup_jaal(exp_sums, test_file=PCAP_FILE):
 
-MAX_MONITORS = 10
+    monitors = []
+    flow_map = {}
 
-class JaalModule(object):
-    def __init__(self):
-         self.monitors = []
-         self.flow_map = {}
-    
-    def call_inference_mod(self):
-        summaries = []
-        for monitor in self.monitors:
-            summary = monitor.get_batch_summary()
-            if summary is not None:
-                summaries.append(summary)
-        inference_module(summaries)
-    
-    def start(self, test_file=PCAP_FILE):
-        for id in range(0, MAX_MONITORS):
-            monitor_thread = Monitor(id, self)
-            monitor_thread.start()
-            self.monitors.append(monitor_thread)
+    for id in range(0, MAX_MONITORS):
+        monitors.append(Monitor(id))
 
-        # Main method of execution, will just keep reading in packets
-        # until we want it to stop
-        num_pkts = 0
-        atk_pkts = 0
-        try:
-            for pkt in PcapReader(test_file):
+    # Main method of execution, will just keep reading in packets
+    # until we want it to stop
+    num_pkts = 0
+    atk_pkts = 0
 
-                if not is_tcp_ip_packet(pkt):
-                    continue
+    atk_pkts_map = {
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+        6: 0
+    }
 
-                pkts_to_add = [pkt]
+    for pkt in PcapReader(test_file):
 
-                # Randomly injecting traffic
-                should_attack = random.randint(0, 100)
-                if should_attack < 10 and (atk_pkts / num_pkts) < 0.1:
+        if not is_tcp_ip_packet(pkt):
+            continue
 
-                    attack_type = random.randint(0, 5)
+        pkts_to_add = [pkt]
 
-                    for loop in range(5, random.randint(10, 50)):
-                        if (atk_pkts / num_pkts) >= 0.1:
-                            break
+        # Randomly injecting traffic, probability = 0.05
+        # As per the paper, we must ensure the attack traffic
+        # is not larger than 10% of the total traffic
+        should_attack = random.randint(0, 100)
+        if num_pkts > 1000 and should_attack < 5 and (atk_pkts / (num_pkts + atk_pkts)) < 0.10:
 
-                        # PORT_SCAN_RULE  -- same IP dest, different port numbers
-                        atk_pkt = pkt
-                        atk_pkt[TCP].dport += loop
+            attack_type = random.randint(0, 6)
 
-                        pkts_to_add.append(atk_pkt)
-                        atk_pkts += 1
-                    
-                    print("ADDED PORT ATTACK WITH {} PACKETS!".format(len(pkts_to_add) - 1))
+            for loop in range(5, random.randint(10, 30)):
+                if (atk_pkts / (num_pkts + atk_pkts)) >= 0.10:
+                    break
 
-                num_pkts += 1
-                for new_pkt in pkts_to_add:
-                    flow_assignment = assign_flow_to_monitor(pkt, self.monitors, self.flow_map)
-                    self.monitors[flow_assignment].add_to_batch(pkt)
+                # PORT_SCAN_RULE  -- same IP dest, different port numbers
+                if attack_type == 0:
+                    atk_pkt = pkt
+                    atk_pkt[IP].src = ATTACK_HOME_IP
+                    atk_pkt[TCP].dport += loop
+                
+                # NMAP TCP Scan -- same IP dest with port = 22
+                elif attack_type == 1:
+                    atk_pkt = pkt
+                    atk_pkt[IP].src = ATTACK_HOME_IP
+                    atk_pkt[TCP].dport = 22
 
-        except KeyboardInterrupt:
-            for monitor_thread in self.monitors:
-                monitor_thread.kill() 
+                # SYM_FLOOD_DDOS_RULE
+                elif attack_type == 2:
+                    atk_pkt = pkt
+                    atk_pkt[IP].src = ATTACK_IPS[random.randint(0, len(ATTACK_IPS) - 1)]
+                    atk_pkt[TCP].dport = 80
 
-        for monitor_thread in self.monitors:
-            monitor_thread.join()
+                # DDOS RULES -  SRC is changed (13), sport (15)
+                elif attack_type == 3:
+                    atk_pkt = pkt
+                    atk_pkt[IP].src = ATTACK_IPS[random.randint(0, len(ATTACK_IPS) - 1)]
+                    atk_pkt[IP].dst = ATTACK_HOME_IP
+                    atk_pkt[TCP].dport = 27665
 
-if __name__ == '__main__':
-    module = JaalModule()
-    module.start()
+                elif attack_type == 4:
+                    atk_pkt = pkt
+                    atk_pkt[IP].src = ATTACK_IPS[random.randint(0, len(ATTACK_IPS) - 1)]
+                    atk_pkt[IP].dst = ATTACK_HOME_IP
+                    atk_pkt[TCP].dport = 15104
+
+                else:
+                    atk_pkt = pkt
+                    atk_pkt[IP].src = ATTACK_IPS[random.randint(0, len(ATTACK_IPS) - 1)]
+                    atk_pkt[IP].dst = ATTACK_HOME_IP
+                    atk_pkt[TCP].dport = 12754
+
+                pkts_to_add.append(atk_pkt)
+                atk_pkts += 1
+                atk_pkts_map[attack_type] += 1
+
+        num_pkts += 1
+        for new_pkt in pkts_to_add:
+            flow_assignment = assign_flow_to_monitor(pkt, monitors, flow_map)
+            should_check = monitors[flow_assignment].add_to_batch(pkt)
+
+            if should_check:
+                # thread = Thread(target=perform_error_detection, args=((monitors),))
+                # thread.start()
+                # thread.join()
+                print("Packet Attack Types:")
+                for key in range(0, 6):
+                    print("Type {}: {} packets".format(key, atk_pkts_map[key]))
+
+                perform_error_detection(monitors, atk_pkts_map, exp_sums)
+
+                atk_pkts_map = {
+                    0: 0,
+                    1: 0,
+                    2: 0,
+                    3: 0,
+                    4: 0,
+                    5: 0,
+                    6: 0
+                }
+
+
+def perform_error_detection(monitors, expected_errors, exp_sums):
+    summaries = []
+    for monitor in monitors:
+        summary = monitor.get_batch_summary()
+        if summary is not None:
+            summaries.append(summary)
+
+    correct, false_positives, false_negatives = inference_module(summaries, expected_errors)
+
+    exp_sums["total"] += len(expected_errors)
+    exp_sums["correct"] += correct
+    exp_sums["false_positives"] += false_positives
+    exp_sums["false_negatives"] += false_negatives
+
+if __name__ == "__main__":
+    exp_sums = {
+        "total": 0,
+        "correct": 0,
+        "false_positives": 0,
+        "false_negatives": 0
+    }
+
+    try:
+        spinup_jaal(exp_sums)
+    except KeyboardInterrupt as e:
+        for key in exp_sums:
+            print("{}: {}".format(key, exp_sums[key]))
