@@ -91,10 +91,8 @@ def similarity_estimate(agg_sum, q, t_d, t_c):
             Q.append(xi)
 
     if c_sum >= t_c:
-        print("Sum is greater than threshold: {}".format(c_sum))
         return True, Q
     else:
-        print("Sum is NOT greater than threshold: {}".format(c_sum))
         return False, Q
 
 def postprocess_header_index(Q, h_idx, t_v):
@@ -157,21 +155,21 @@ def inference_module(batch_summaries, expected_errors):
 
     attacks = [False, False, False, False, False, False]
 
-    did_find_error, Q = similarity_estimate(agg_summaries, port_scan_rule, 0.1, 10)
+    did_find_error, Q = similarity_estimate(agg_summaries, port_scan_rule, 0.1, 20)
     attacks[0] = did_find_error or postprocess_header_index(Q, 16, 0.1)
 
-    attacks[1] = similarity_estimate(agg_summaries, nmap_scan_rule, 0.1, 10)[0]
+    attacks[1] = similarity_estimate(agg_summaries, nmap_scan_rule, 0.1, 20)[0]
     
-    did_find_error, Q = similarity_estimate(agg_summaries, syn_floods_rule, 0.1, 10)
+    did_find_error, Q = similarity_estimate(agg_summaries, syn_floods_rule, 0.1, 20)
     attacks[2] = did_find_error or postprocess_header_index(Q, 13, 0.1)
 
-    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_1, 0.1, 10)
+    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_1, 0.1, 20)
     attacks[3] = did_find_error or postprocess_header_index(Q, 13, 0.1)
     
-    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_2, 0.1, 10)
+    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_2, 0.1, 20)
     attacks[4] = did_find_error or postprocess_header_index(Q, 13, 0.1)
     
-    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_3, 0.1, 10)
+    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_3, 0.1, 20)
     attacks[5] = did_find_error or postprocess_header_index(Q, 13, 0.1)
 
     false_positives = 0
@@ -179,11 +177,11 @@ def inference_module(batch_summaries, expected_errors):
     correct = 0
 
     for a_idx in range(len(attacks)):
-        if (attacks[a_idx] and expected_errors[a_idx] >= 10) or (not attacks[a_idx] and expected_errors[a_idx] < 10):
+        if (attacks[a_idx] and expected_errors[a_idx] >= 20) or (not attacks[a_idx] and expected_errors[a_idx] < 20):
             correct += 1
-        elif not attacks[a_idx] and expected_errors[a_idx] >= 10:
+        elif not attacks[a_idx] and expected_errors[a_idx] >= 20:
             false_negatives += 1
-        elif attacks[a_idx] and expected_errors[a_idx] < 10:
+        elif attacks[a_idx] and expected_errors[a_idx] < 20:
             false_positives += 1
     
     return correct, false_positives, false_negatives

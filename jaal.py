@@ -50,15 +50,15 @@ def spinup_jaal(exp_sums, test_file=PCAP_FILE):
 
         pkts_to_add = [pkt]
 
-        # Randomly injecting traffic, probability = 0.05
+        # Randomly injecting traffic, probability = 0.03
         # As per the paper, we must ensure the attack traffic
         # is not larger than 10% of the total traffic
-        should_attack = random.randint(0, 100)
-        if num_pkts > 1000 and should_attack < 5 and (atk_pkts / (num_pkts + atk_pkts)) < 0.10:
+        should_attack = random.randint(1, 100)
+        if num_pkts > 1000 and should_attack < 3 and (atk_pkts / (num_pkts + atk_pkts)) < 0.10:
 
             attack_type = random.randint(0, 6)
 
-            for loop in range(5, random.randint(10, 30)):
+            for loop in range(5, random.randint(10, 20)):
                 if (atk_pkts / (num_pkts + atk_pkts)) >= 0.10:
                     break
 
@@ -138,7 +138,7 @@ def perform_error_detection(monitors, expected_errors, exp_sums):
 
     correct, false_positives, false_negatives = inference_module(summaries, expected_errors)
 
-    exp_sums["total"] += len(expected_errors)
+    exp_sums["total"] += 6
     exp_sums["correct"] += correct
     exp_sums["false_positives"] += false_positives
     exp_sums["false_negatives"] += false_negatives

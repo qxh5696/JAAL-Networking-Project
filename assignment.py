@@ -10,6 +10,7 @@ pool assignment based on similar functionality described in the paper, where eac
 thread of execution.
 """
 from scapy.layers.l2 import Ether
+from scapy.layers.inet import IP, TCP
 
 MAX_MONITORS = 10
 PCAP_FILE = '201601011400.pcap'
@@ -40,7 +41,7 @@ def get_least_loaded_monitor(monitors):
     return min_flow_idx
 
 def assign_flow_to_monitor(pkt, monitors, flow_map):
-    src, dst = pkt[Ether].src, pkt[Ether].dst
+    src, dst = pkt[IP].src, pkt[IP].dst
     flow_assignment = 0
     if src not in flow_map or dst not in flow_map[src]:
         flow_assignment = get_least_loaded_monitor(monitors)

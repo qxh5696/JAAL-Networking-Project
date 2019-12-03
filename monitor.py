@@ -7,6 +7,7 @@ import util
 
 from threading import Thread
 from scapy.layers.l2 import Ether
+from scapy.layers.inet import IP, TCP
 
 from summarize import summarize_packet_data
 from constants import *
@@ -47,7 +48,7 @@ class Monitor(object):
             print("Monitor {}: {} packets".format(self.id, self.num_packets))
 
             # Parse to see if this is a new flow
-            src, dst = pkt[Ether].src, pkt[Ether].dst
+            src, dst = pkt[IP].src, pkt[IP].dst
             self.num_packets += 1
 
             if src not in self.flows:
