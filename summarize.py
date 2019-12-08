@@ -1,8 +1,13 @@
 """
 File: summarize.py
-Description: Module containing the implementation to the summarization module.
+
+Description: Module containing the implementation to the summarization module, which will take in
+a batch of packets (defined in constants.py) and create a summary representation that can be
+interpreted by the inference module to detect possible intrusion attacks.
+
 Language: python3
-Authors: Qadir Haqq, Theodora Bendlin, John Tran
+
+Authors: Qadir Haqq, Theodora Bendlin
 """
 
 import numpy as np
@@ -71,14 +76,10 @@ def perform_svd_decomp(df, r):
 
     See Section 4.2 of the Jaal paper for more details.
 
-    @parameter df (Dataframe) the dataframe to reduce
-    @parameter r (int) the number of top n components to keep after SVD
+    :param df: (Dataframe) the dataframe to reduce
+    :param r: (int) the number of top n components to keep after SVD
 
-    @returns Xp, (u_r, sig_r, v_r) (numpy arr) the matrix representations of summary data
-
-    :param df:
-    :param r:
-    :return:
+    :return: the matrix representations of summary data
     """
 
     df = df.dropna(axis=0)
@@ -107,17 +108,16 @@ def perform_svd_decomp(df, r):
 
 def create_combined_summary(Xp, k):
     """
+
     Creates the first approach to a summary representation.
     Performs kmeans++ clustering, then concatenates a membership
     count vector for each cluster according to Section 4.3.
 
-    @parameter Xp (numpy array) the reduced summary array
-    @parameter k (int) the number of clusters
+    :param Xp: (numpy array) the reduced summary array
+    :param k: (int) the number of clusters
 
-    @returns S1m (numpy array), the final packet summary
-    :param Xp:
-    :param k:
-    :return:
+    :return: (numpy array), the final packet summary
+
     """
 
     clustering_results, c = get_clustering_results(Xp, k)
@@ -133,15 +133,11 @@ def create_split_summary(Ur, Sigr, Vr, k):
     count vector for each cluster and the dot product of the reduced
     rank SVD results, according to Section 4.3.
 
-    @parameter Ur, Sigr, Kr (numpy array) the reduced summary array components
-    @parameter k (int) the number of clusters
-
-    @returns S2m (numpy array), the final packet summary
-    :param Ur:
-    :param Sigr:
-    :param Vr:
-    :param k:
-    :return:
+    :param Ur: (numpy array) the reduced summary array components
+    :param Sigr: (numpy array) the reduced summary array components
+    :param Vr: (numpy array) the reduced summary array components
+    :param k: (int) the number of clusters
+    :return: (numpy array), the final packet summary
     """
 
     clustering_results, c = get_clustering_results(Ur, k)
@@ -157,14 +153,11 @@ def get_clustering_results(X, k):
     Helper function that will perform the k-means++ algorithm and
     compute the membership count vector (c).
 
-    @parameter X (numpy array) the 2D array to be clustered
-    @parameter k (int) the number of clusters
+    :param X: (numpy array) the 2D array to be clustered
+    :param k: (int) the number of clusters
 
-    @returns clustering_results (numpy array) the centroids from each cluster
-    @returns c (numpy array), the array of membership counts for each cluster
-    :param X:
-    :param k:
-    :return:
+    :return:(numpy array) the centroids from each cluster, (numpy array) the array 
+        of membership counts for each cluster
     """
 
     # Getting the initial centroids and other data
@@ -177,17 +170,3 @@ def get_clustering_results(X, k):
         c[cluster] = sum(1 for x in kmeans_results.labels_ if x == cluster)
 
     return clustering_results, c
-
-def _test_summarization():
-    df = pd.DataFrame(columns=util.TCP_COLS)
-    i = 0
-    for pkt in PcapReader('201601011400.pcap'):
-        print(pkt[IP].dst)
-        if i == 100:
-            break
-        _, df = util.add_pcap_packet_to_df(pkt, df)
-        i += 1
-    print(summarize_packet_data(df))
-
-if __name__ == '__main__':
-    _test_summarization()

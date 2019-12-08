@@ -1,14 +1,16 @@
 """
 File: jaal.py
+
 Description: Main driver file for our Jaal system that will invoke funtionality from
-all three modules. At the moment, functionality simply reads test data from
-MAWI group and performs packet summarization.
+all three modules while reading in the MAWI trace.
+
 Language: python3
+
 Authors: Qadir Haqq, Theodora Bendlin, John Tran
 """
 import random
 
-from util import parse_pcap_packets, is_tcp_ip_packet, IP, TCP
+from util import is_tcp_ip_packet, IP, TCP
 from summarize import summarize_packet_data
 from assignment import assign_flow_to_monitor
 from monitor import Monitor
@@ -21,15 +23,25 @@ from scapy.layers.l2 import Ether
 from threading import Thread
 
 def spinup_jaal(exp_sums, test_file=PCAP_FILE):
+    """
+        Main method of execution, will read in packets until 
+        CTRL + C is pressed. Runs a basic experiement of accuracy
+        where attack packets are randomly injected, and the expected
+        and actual counts are counted.
+
+        :param exp_sums: (dict) keeps track of the experimental results to be
+            printed after execution stops
+        :param test_tile: (string) file name of PCAP TCP dump
+    """
 
     monitors = []
     flow_map = {}
 
+    # Creating the list of monitors
     for id in range(0, MAX_MONITORS):
         monitors.append(Monitor(id))
 
-    # Main method of execution, will just keep reading in packets
-    # until we want it to stop
+    # Keep track of types of packets to ensure 10% of attack traffic isn't exceeded
     num_pkts = 0
     atk_pkts = 0
 
@@ -45,6 +57,7 @@ def spinup_jaal(exp_sums, test_file=PCAP_FILE):
 
     for pkt in PcapReader(test_file):
 
+        # The paper only considers TCP/IP packets
         if not is_tcp_ip_packet(pkt):
             continue
 
@@ -109,9 +122,6 @@ def spinup_jaal(exp_sums, test_file=PCAP_FILE):
             should_check = monitors[flow_assignment].add_to_batch(pkt)
 
             if should_check:
-                # thread = Thread(target=perform_error_detection, args=((monitors),))
-                # thread.start()
-                # thread.join()
                 print("Packet Attack Types:")
                 for key in range(0, 6):
                     print("Type {}: {} packets".format(key, atk_pkts_map[key]))
@@ -128,8 +138,17 @@ def spinup_jaal(exp_sums, test_file=PCAP_FILE):
                     6: 0
                 }
 
-
 def perform_error_detection(monitors, expected_errors, exp_sums):
+    """
+    
+        Helper function that will update the experiment results with the
+        counts from the inference module.
+
+        :param monitors: (list) List of all monitors used in Jaal
+        :param expected_errors: (dict) dictionary of error type --> number of packets
+        :param exp_sums: (dict) dictionary of experiment result summations
+    
+    """
     summaries = []
     for monitor in monitors:
         summary = monitor.get_batch_summary()

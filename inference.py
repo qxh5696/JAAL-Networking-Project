@@ -1,10 +1,16 @@
 """
 File: inference.py
-Description: Inference module, functionality to be implemented in future work.
+
+Description: Implementation for the inference module, which will aggregate the summaries from
+all monitors meeting the minimum batch size and use a combination of similarlity rules and variance
+tp determine if one of six attacks occured.
+
 Language: python3
+
 Authors: Qadir Haqq, Theodora Bendlin, John Tran
 
-Example SNORT Rule:
+Example SNORT Rule translation:
+
 alert[0] tcp[1] $EXTERNAL_NET[2] any[3] -> $HOME_NET[4] 22[5] (msg: "INDICATORSCAN
 SSH brute force login attempt"[6]; flow: to_server[7], established[8]; content:
 "SSH-"[9]; depth: 4[10]; detection_filter: track by_src[11], count 5[12], seconds 60[13];
@@ -14,15 +20,11 @@ The rule postulates that an alert must be generated if 5 packets
 destined for the home network were received within the last 60s,
 with port number 22.
 
-To translate this rule into a question vector, Jaal initializes a vector of size 18 with −1 set for every position
-
-Then, the position corresponding to the IP address is set to the normalized home network IP address and the position
+To translate this rule into a question vector, Jaal initializes a vector of size 18 
+with −1 set for every position. Then, the position corresponding to the IP address is 
+set to the normalized home network IP address and the position
 corresponding to port number is set to 22 (normalized version).
 
-Question Vectors:
-(i) SYN floods to represent DoS attacks,
-(ii) distributed SYN floods to represent DDoS,
-(iii) distributed port scans
 """
 
 import numpy as np
@@ -50,6 +52,16 @@ DDOS_RULE_3 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 12
 QUESTION_VECTORS = [PORT_SCAN_RULE, NMAP_TCP_SCAN_RULE, SYM_FLOOD_DDOS_RULE, DDOS_RULE_1, DDOS_RULE_2, DDOS_RULE_3]
 
 def create_aggregate_summary(summaries):
+    """
+    
+        Creates the aggregate summary view, as specified by the original
+        paper. Summaries that are not in form S1 are converted to S1, and 
+        all are concatenated together.
+    
+        :param summaries: (list) summaries collected from monitors
+        
+        :returns: (numpy array) aggregate batch summary representation
+    """
     if len(summaries) <= 0:
         return None
 
@@ -65,6 +77,14 @@ def create_aggregate_summary(summaries):
     return np.concatenate(agg_summaries, axis=0)
 
 def distance_measure(q, x):
+    """
+    
+        Calculates the similarity distance measure specified in
+        the paper for non-negative rule values.
+    
+        :param q: (array) the question vector
+        :param x: (array) row from aggregate summary
+    """
     q_x_sum = 0.0
     q_sum = 0.0
     for j in range(len(q)):
@@ -78,6 +98,18 @@ def distance_measure(q, x):
     return q_x_sum / q_sum
 
 def similarity_estimate(agg_sum, q, t_d, t_c):
+    """
+    
+        Similarity estimate algorithm, defined in the Jaal paper.
+
+        :param agg_sum: (array) the aggregate summary of monitors
+        :param q: a question vector used to detect an attack
+        :param t_d: threshold value for the maximum distance value in the rule
+        :param t_c: threshold value for the minimum number of packets needed for
+            an alert to be created
+
+        :returns: (boolean) if an attack was generated, (array) Q, the likely attack rows
+    """
     c_sum = 0
     Q = []
 
@@ -96,6 +128,19 @@ def similarity_estimate(agg_sum, q, t_d, t_c):
         return False, Q
 
 def postprocess_header_index(Q, h_idx, t_v):
+    """
+    
+        Additional function that will find columns
+        with a lot of variance, which is typical of distributed
+        attacks that may not have matched with the signature rules.
+
+        :param Q: the likely attack rows
+        :param h_idx: (int) the index of the header column
+        :param t_v: (int) threshold value for variance
+
+        :returns: (boolean) if an attack was generated
+
+    """
     z = []
 
     for row in range(len(Q)):
@@ -115,6 +160,20 @@ def postprocess_header_index(Q, h_idx, t_v):
     return False
 
 def set_normalized_rule(agg_sum, val_pairs, q):
+    """
+    
+        Helper function that will take in a question vector and a list of
+        values that are to be normalized and set in the question vector.
+
+        The normalization will either set a precomputed normalized value, 
+        or it will scale the value to a given range.
+
+        :param agg_sum: (array) the aggregate summary of monitors
+        :param val_pairs: (list) value pairs, in form of (val, idx, val_min, val_max, should_scale_and_normalize)
+        :param q: (array) question vector
+    
+        :returns: the set question vector
+    """
     maxes = agg_sum.max(1)
     mins = agg_sum.min(1)
 
@@ -135,16 +194,36 @@ def set_normalized_rule(agg_sum, val_pairs, q):
         else:
             q[idx] = value
 
-    #print("Question vector: ", q)
     return q
 
 
 def inference_module(batch_summaries, expected_errors):
+    """
+    
+        Main method that will perform inference on a list of batch summaries.
+
+        Two main methods are used for inference:
+        (1) Rule similarity estimate, which will measure the similarity between
+        question vectors and rows of aggregate summary
+        (2) Variance postprocessing. Distributed attacks may not be captured
+        by the question vectors, but large variance in fields like IP address
+        would better capture these attacks.
+
+        :param batch_summaries: (list) summaries from each monitor
+        :param expected_errors: (dict) actual attack counts to use with experiment
+    
+        :returns: the counts of the number of correctly detected counts, as well as the
+        false positives and false negatives
+    """
+
+    # Summaries must be collected into and "aggregate view" that is compatible
+    # with Snort tules
     agg_summaries = create_aggregate_summary(batch_summaries)
     if agg_summaries is None:
         print("No summaries to perform inference on!")
         return
 
+    # Setting up the rules to be used with inference
     column_means = agg_summaries.mean(axis=1)
     port_scan_rule = set_normalized_rule(agg_summaries, [(util.ipstring_to_int(ATTACK_HOME_IP), 13, 1, 255255255254, True)], PORT_SCAN_RULE)
     nmap_scan_rule = set_normalized_rule(agg_summaries, [(util.ipstring_to_int(ATTACK_HOME_IP), 13, 1, 255255255254, True), (22, 16, 1, 65535, True)], NMAP_TCP_SCAN_RULE)
@@ -155,33 +234,35 @@ def inference_module(batch_summaries, expected_errors):
 
     attacks = [False, False, False, False, False, False]
 
-    did_find_error, Q = similarity_estimate(agg_summaries, port_scan_rule, 0.1, 20)
-    attacks[0] = did_find_error or postprocess_header_index(Q, 16, 0.1)
+    did_find_error, Q = similarity_estimate(agg_summaries, port_scan_rule, 0.10, 20)
+    attacks[0] = did_find_error or postprocess_header_index(Q, 16, 0.20)
 
-    attacks[1] = similarity_estimate(agg_summaries, nmap_scan_rule, 0.1, 20)[0]
+    attacks[1] = similarity_estimate(agg_summaries, nmap_scan_rule, 0.15, 20)[0]
     
-    did_find_error, Q = similarity_estimate(agg_summaries, syn_floods_rule, 0.1, 20)
-    attacks[2] = did_find_error or postprocess_header_index(Q, 13, 0.1)
+    did_find_error, Q = similarity_estimate(agg_summaries, syn_floods_rule, 0.10, 70)
+    attacks[2] = did_find_error or postprocess_header_index(Q, 13, 0.20)
 
-    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_1, 0.1, 20)
-    attacks[3] = did_find_error or postprocess_header_index(Q, 13, 0.1)
+    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_1, 0.10, 10)
+    attacks[3] = did_find_error or postprocess_header_index(Q, 13, 0.20)
     
-    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_2, 0.1, 20)
-    attacks[4] = did_find_error or postprocess_header_index(Q, 13, 0.1)
+    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_2, 0.10, 10)
+    attacks[4] = did_find_error or postprocess_header_index(Q, 13, 0.20)
     
-    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_3, 0.1, 20)
-    attacks[5] = did_find_error or postprocess_header_index(Q, 13, 0.1)
+    did_find_error, Q = similarity_estimate(agg_summaries, ddos_rule_3, 0.10, 10)
+    attacks[5] = did_find_error or postprocess_header_index(Q, 13, 0.20)
 
     false_positives = 0
     false_negatives = 0
     correct = 0
 
+    expected_counts = [20, 20, 70, 10, 10, 10]
     for a_idx in range(len(attacks)):
-        if (attacks[a_idx] and expected_errors[a_idx] >= 20) or (not attacks[a_idx] and expected_errors[a_idx] < 20):
+        count = expected_counts[a_idx]
+        if (attacks[a_idx] and expected_errors[a_idx] >= count) or (not attacks[a_idx] and expected_errors[a_idx] < count):
             correct += 1
-        elif not attacks[a_idx] and expected_errors[a_idx] >= 20:
+        elif not attacks[a_idx] and expected_errors[a_idx] >= count:
             false_negatives += 1
-        elif attacks[a_idx] and expected_errors[a_idx] < 20:
+        elif attacks[a_idx] and expected_errors[a_idx] < count:
             false_positives += 1
     
     return correct, false_positives, false_negatives

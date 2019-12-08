@@ -1,11 +1,17 @@
 """
-    Thread class representing a monitor.
+File: monitor.py
+
+Description: Monitor class for the flow assignment module.
+
+Language: python3
+
+Author: Theodora Bendlin
+
 """
 
 import pandas as pd
 import util
 
-from threading import Thread
 from scapy.layers.l2 import Ether
 from scapy.layers.inet import IP, TCP
 
@@ -21,7 +27,7 @@ class Monitor(object):
         # Batch dataframe will hold all of the packets that are used for summarization
         self.batch = pd.DataFrame(columns=util.TCP_COLS)
 
-        # Keeping track of the flows that this monitor has
+        # Keeping track of the flows and packets that this monitor has
         self.flows = {}
         self.num_flows = 0
         self.num_packets = 0
@@ -31,16 +37,32 @@ class Monitor(object):
         self.batch_size = batch_size
     
     def get_batch_summary(self):
-        if self.num_packets < MAX_BATCH:
+        """
+            Helper function that will retrieve the summary for the monitor's batch
+            of packets, and then remove them from the current batch.
+
+            :return: (numpy array) summarized version of the monitor's packets from 0 
+                to the batch size
+        """
+        if self.num_packets < self.batch_size:
             return None
 
-        summary = summarize_packet_data(self.batch[:MAX_BATCH])
-        self.batch.drop(self.batch.index[:MAX_BATCH], inplace=True)
-        self.num_packets -= MAX_BATCH
+        summary = summarize_packet_data(self.batch[:self.batch_size])
+        self.batch.drop(self.batch.index[:self.batch_size], inplace=True)
+        self.num_packets -= self.batch_size
 
         return summary
     
     def add_to_batch(self, pkt):
+        """
+            Adds the packet to the monitors dataframe. Updates an internal flow table
+            to keep track of the flows specific to the monitor, which is used in flow
+            assignment module.
+
+            :param pkt: (scapy Packet) packet to add to the monitor
+            
+            :return: (boolean) T/F if the maximum batch size of the monitor has been exceeded
+        """
         # Add the packet to the current dataframe
         is_success, self.batch = util.add_pcap_packet_to_df(pkt, self.batch)
 
