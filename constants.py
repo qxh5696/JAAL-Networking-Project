@@ -1,3 +1,12 @@
+"""
+File: constants.py
+
+Description: File containing the constants used throughout the Jaal project for easy access.
+
+Language: python3
+
+Authors: Qadir Haqq, Theodora Bendlin, John Tran
+"""
 MAX_BATCH = 1000
 
 # PCAP file can be downloaded from this URL:

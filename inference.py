@@ -2,8 +2,8 @@
 File: inference.py
 
 Description: Implementation for the inference module, which will aggregate the summaries from
-all monitors meeting the minimum batch size and use a combination of similarlity rules and variance
-tp determine if one of six attacks occured.
+all monitors meeting the minimum batch size and use a combination of similarity rules and variance
+tp determine if one of six attacks occurred.
 
 Language: python3
 
@@ -24,7 +24,6 @@ To translate this rule into a question vector, Jaal initializes a vector of size
 with −1 set for every position. Then, the position corresponding to the IP address is 
 set to the normalized home network IP address and the position
 corresponding to port number is set to 22 (normalized version).
-
 """
 
 import numpy as np
@@ -40,7 +39,7 @@ PORT_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1,
 NMAP_TCP_SCAN_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 22, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # https://serverfault.com/questions/178437/snort-rules-for-syn-flood-ddos
-SYM_FLOOD_DDOS_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 80, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+SYN_FLOOD_DDOS_RULE = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 80, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # https://github.com/eldondev/Snort/blob/master/rules/ddos.rules
 DDOS_RULE_1 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 27665, -1, -1, -1, -1, -1, -1, -1, -1]
@@ -49,11 +48,11 @@ DDOS_RULE_2 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 15
 
 DDOS_RULE_3 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, 12754, -1, -1, -1, -1, -1, -1, -1, -1]
 
-QUESTION_VECTORS = [PORT_SCAN_RULE, NMAP_TCP_SCAN_RULE, SYM_FLOOD_DDOS_RULE, DDOS_RULE_1, DDOS_RULE_2, DDOS_RULE_3]
+QUESTION_VECTORS = [PORT_SCAN_RULE, NMAP_TCP_SCAN_RULE, SYN_FLOOD_DDOS_RULE, DDOS_RULE_1, DDOS_RULE_2, DDOS_RULE_3]
+
 
 def create_aggregate_summary(summaries):
     """
-    
         Creates the aggregate summary view, as specified by the original
         paper. Summaries that are not in form S1 are converted to S1, and 
         all are concatenated together.
@@ -76,9 +75,9 @@ def create_aggregate_summary(summaries):
 
     return np.concatenate(agg_summaries, axis=0)
 
+
 def distance_measure(q, x):
     """
-    
         Calculates the similarity distance measure specified in
         the paper for non-negative rule values.
     
@@ -97,9 +96,9 @@ def distance_measure(q, x):
 
     return q_x_sum / q_sum
 
+
 def similarity_estimate(agg_sum, q, t_d, t_c):
     """
-    
         Similarity estimate algorithm, defined in the Jaal paper.
 
         :param agg_sum: (array) the aggregate summary of monitors
@@ -127,9 +126,9 @@ def similarity_estimate(agg_sum, q, t_d, t_c):
     else:
         return False, Q
 
+
 def postprocess_header_index(Q, h_idx, t_v):
     """
-    
         Additional function that will find columns
         with a lot of variance, which is typical of distributed
         attacks that may not have matched with the signature rules.
@@ -159,9 +158,9 @@ def postprocess_header_index(Q, h_idx, t_v):
     
     return False
 
+
 def set_normalized_rule(agg_sum, val_pairs, q):
     """
-    
         Helper function that will take in a question vector and a list of
         values that are to be normalized and set in the question vector.
 
@@ -199,7 +198,6 @@ def set_normalized_rule(agg_sum, val_pairs, q):
 
 def inference_module(batch_summaries, expected_errors):
     """
-    
         Main method that will perform inference on a list of batch summaries.
 
         Two main methods are used for inference:
@@ -217,7 +215,7 @@ def inference_module(batch_summaries, expected_errors):
     """
 
     # Summaries must be collected into and "aggregate view" that is compatible
-    # with Snort tules
+    # with Snort rules
     agg_summaries = create_aggregate_summary(batch_summaries)
     if agg_summaries is None:
         print("No summaries to perform inference on!")
@@ -227,7 +225,7 @@ def inference_module(batch_summaries, expected_errors):
     column_means = agg_summaries.mean(axis=1)
     port_scan_rule = set_normalized_rule(agg_summaries, [(util.ipstring_to_int(ATTACK_HOME_IP), 13, 1, 255255255254, True)], PORT_SCAN_RULE)
     nmap_scan_rule = set_normalized_rule(agg_summaries, [(util.ipstring_to_int(ATTACK_HOME_IP), 13, 1, 255255255254, True), (22, 16, 1, 65535, True)], NMAP_TCP_SCAN_RULE)
-    syn_floods_rule = set_normalized_rule(agg_summaries, [(column_means[13], 13, 0, 0, False), (80, 16, 1, 65535, True)], SYM_FLOOD_DDOS_RULE)
+    syn_floods_rule = set_normalized_rule(agg_summaries, [(column_means[13], 13, 0, 0, False), (80, 16, 1, 65535, True)], SYN_FLOOD_DDOS_RULE)
     ddos_rule_1 = set_normalized_rule(agg_summaries, [(column_means[13], 13, 0, 0, False), (27665, 16, 1, 65535, True)], DDOS_RULE_1)
     ddos_rule_2 = set_normalized_rule(agg_summaries, [(column_means[13], 13, 0, 0, False), (15104, 16, 1, 65535, True)], DDOS_RULE_2)
     ddos_rule_3 = set_normalized_rule(agg_summaries, [(column_means[13], 13, 0, 0, False), (12754, 16, 1, 65535, True)], DDOS_RULE_3)

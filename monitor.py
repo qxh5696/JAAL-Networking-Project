@@ -6,7 +6,6 @@ Description: Monitor class for the flow assignment module.
 Language: python3
 
 Author: Theodora Bendlin
-
 """
 
 import pandas as pd
@@ -17,6 +16,7 @@ from scapy.layers.inet import IP, TCP
 
 from summarize import summarize_packet_data
 from constants import *
+
 
 class Monitor(object):
     def __init__(self, id, batch_size=MAX_BATCH):

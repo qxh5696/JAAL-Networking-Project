@@ -1,5 +1,4 @@
 """
-
 File: inference.py
 
 Description: Due to time constraints, we are implementing the "flow assignment" 
@@ -14,11 +13,11 @@ that are sent from the same source to the same destination
 Language: python3
 
 Authors: Theodora Bendlin
-
 """
 from scapy.layers.l2 import Ether
 from scapy.layers.inet import IP, TCP
 from constants import *
+
 
 def get_least_loaded_monitor(monitors):
     """
@@ -42,6 +41,7 @@ def get_least_loaded_monitor(monitors):
             min_flow_idx = idx
     
     return min_flow_idx
+
 
 def assign_flow_to_monitor(pkt, monitors, flow_map):
     """

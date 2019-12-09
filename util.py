@@ -5,12 +5,12 @@ Language: python3
 Authors: Qadir Haqq, Theodora Bendlin
 """
 
-
 import pandas as pd
 from scapy.utils import PcapReader
 from scapy.layers.l2 import Ether
 from scapy.layers.inet import IP, TCP
 from constants import *
+
 
 def add_pcap_packet_to_df(packet, packet_df):
     """
@@ -55,13 +55,14 @@ def add_pcap_packet_to_df(packet, packet_df):
             COLUMNS_TCP[24]: [packet[TCP].urgptr],
         })
 
-    # append is NOT  an inplace operation!
+    # append is NOT an inplace operation!
     packet_df = packet_df.append(df, ignore_index=True, sort=False)
     return True, packet_df
 
+
 def hexstring_to_int(hex_s):
     """
-    Helper funtion that converts HW addresses into decimal form
+    Helper function that converts HW addresses into decimal form
 
     :param hex_s: (str) HW address string
     :return: (int) integer representation of the HW address
@@ -73,13 +74,15 @@ def hexstring_to_int(hex_s):
 
 def ipstring_to_int(ip_s):
     """
-    Helper funtion that converts string IP address into decimal form
+    Helper function that converts string IP address into decimal form
 
     :param ip_s: (str) IP address string
     :return: (int) integer representation of the IP address
     """
+
     ip_s = ip_s.replace('.', '')
     return int(ip_s)
+
 
 def is_tcp_ip_packet(pkt):
     """
@@ -88,6 +91,7 @@ def is_tcp_ip_packet(pkt):
 
         :return: (boolean) if the packet is a TCP/IP packet
     """
+
     try:
         pkt[TCP].sport
         pkt[IP].id

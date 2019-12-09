@@ -1,7 +1,7 @@
 """
 File: jaal.py
 
-Description: Main driver file for our Jaal system that will invoke funtionality from
+Description: Main driver file for our Jaal system that will invoke functionality from
 all three modules while reading in the MAWI trace.
 
 Language: python3
@@ -22,10 +22,11 @@ from scapy.layers.l2 import Ether
 
 from threading import Thread
 
+
 def spinup_jaal(exp_sums, test_file=PCAP_FILE):
     """
         Main method of execution, will read in packets until 
-        CTRL + C is pressed. Runs a basic experiement of accuracy
+        CTRL + C is pressed. Runs a basic experiment of accuracy
         where attack packets are randomly injected, and the expected
         and actual counts are counted.
 
@@ -87,7 +88,7 @@ def spinup_jaal(exp_sums, test_file=PCAP_FILE):
                     atk_pkt[IP].src = ATTACK_HOME_IP
                     atk_pkt[TCP].dport = 22
 
-                # SYM_FLOOD_DDOS_RULE
+                # SYN_FLOOD_DDOS_RULE
                 elif attack_type == 2:
                     atk_pkt = pkt
                     atk_pkt[IP].src = ATTACK_IPS[random.randint(0, len(ATTACK_IPS) - 1)]
@@ -138,16 +139,15 @@ def spinup_jaal(exp_sums, test_file=PCAP_FILE):
                     6: 0
                 }
 
+
 def perform_error_detection(monitors, expected_errors, exp_sums):
     """
-    
         Helper function that will update the experiment results with the
         counts from the inference module.
 
         :param monitors: (list) List of all monitors used in Jaal
         :param expected_errors: (dict) dictionary of error type --> number of packets
         :param exp_sums: (dict) dictionary of experiment result summations
-    
     """
     summaries = []
     for monitor in monitors:
@@ -161,6 +161,7 @@ def perform_error_detection(monitors, expected_errors, exp_sums):
     exp_sums["correct"] += correct
     exp_sums["false_positives"] += false_positives
     exp_sums["false_negatives"] += false_negatives
+
 
 if __name__ == "__main__":
     exp_sums = {
